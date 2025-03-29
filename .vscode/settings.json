@@ -1,0 +1,3 @@
+{
+    "python.defaultInterpreterPath": "/home/gleb/miniconda3/envs/worm_sim_env/bin/python" //Change to your env path to auto-activate the env
+}
