@@ -1,8 +1,11 @@
 
-** Building a full simulation of a worm from scratch**
+# Worm Sim
 
-Why worm?
-- Its has a small, wierd neuron types which would give you the first principle knowledge behind what it takes to segment, and simulate an organism.
+Simulating C.elegans from first principles
 
-Why not a different, more mammal like animal?
-- Because C.Elegans are compute agile due to the small number of neurons. 
+
+## Installations
+Env setup:
+```
+conda env create -f environment.yml
+```
