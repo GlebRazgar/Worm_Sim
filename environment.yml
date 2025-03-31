@@ -1,0 +1,11 @@
+name: worm_sim_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - zarr=2
+  - pip
+  - pip:
+    - cloud-volume
