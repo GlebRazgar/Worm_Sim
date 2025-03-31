@@ -3,7 +3,7 @@
 Simulating C.elegans from first principles
 
 
-## Installation
+### Installation
 Requirements installation:
 ```
 conda env create -f environment.yml
