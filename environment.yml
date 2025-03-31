@@ -8,4 +8,4 @@ dependencies:
   - zarr=2
   - pip
   - pip:
-    - cloud-volume
+      - cloud-volume
