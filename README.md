@@ -11,5 +11,6 @@ conda env create -f environment.yml
 
 
 ### Dataviewing
-When the neuroglancer server is hosted, to access the view from neuro-glancer, local host follows this pattenr:
+To view data & labels launch the neuroglancer server by running ```python data/view_data.py```
+Then locally view it in your browser using this pattern:
 http://localhost:YOUR-IP/v/NEUROGLANER-PATTERN
