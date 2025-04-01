@@ -18,7 +18,7 @@ from attrdict import AttrDict
 from collections import OrderedDict
 import warnings
 import torch
-from model.Mnet import MNet
+from src.mnet import MNet
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0" # Note: This might have no effect if CUDA is not available
 warnings.filterwarnings("ignore")
