@@ -35,10 +35,10 @@ print(f"SegNeuron expects x,y resolution ~6-9 nm and z resolution ~8-50 nm")
 z_center = raw_data.shape[0] // 2
 z_range = 20  # Get more slices for higher resolution
 
-# Extract a region of 512x512 pixels from the center for higher resolution
-y_center = raw_data.shape[1] // 2
-x_center = raw_data.shape[2] // 2
-size = 512  # Larger region for higher resolution
+# Extract a region of 512x512 pixels from the bottom portion instead of center
+y_center = int(raw_data.shape[1] * 0.75)  # Move to 75% down the y-axis
+x_center = raw_data.shape[2] // 2  # Keep x-axis centered
+size = 512  # Keep same region size
 
 # Define region to extract
 y_start = max(0, y_center - size//2)
