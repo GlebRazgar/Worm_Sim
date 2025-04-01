@@ -3,6 +3,7 @@ import yaml
 import argparse
 import imageio
 import numpy as np
+from src.affinity_postprocessing import segment_neuron_affinities, segment_to_image
 
 # Patch for collections.Mapping import error in Python >= 3.10
 import sys
@@ -63,17 +64,23 @@ if __name__ == "__main__":
     print("inputs.shape: ", inputs.shape)
     # target = target.to(device) # Use determined device
     with torch.no_grad():
-        pred, bound = model(inputs)
-    print("pred.shape: ", pred.shape)
-    print("bound.shape: ", bound.shape)
-    output_img = np.squeeze(pred.data.cpu().numpy())
-    print("output_img.shape: ", output_img.shape)  # (3, 20, 171, 171)
+        affinity, mask = model(inputs)
+    print("affinity.shape: ", affinity.shape)
+    print("mask.shape: ", mask.shape)
+    affinity = np.squeeze(affinity.data.cpu().numpy())
+    mask = np.squeeze(mask.data.cpu().numpy())
+    print("affinity.shape: ", affinity.shape)  # (3, 20, 171, 171)
+    print("mask.shape: ", mask.shape)  # (1, 20, 171, 171)
 
     # Transpose from (C, Z, Y, X) to (Z, Y, X, C)
-    output_img = np.transpose(output_img, (1, 2, 3, 0))
+
+    segment = segment_neuron_affinities(affinity, mask)
+    print("segment.shape: ", segment.shape)
+    segment_img = segment_to_image(segment)
+    print("segment_img.shape: ", segment_img.shape)
 
     # Save as multi-channel 3D tiff stack
     imageio.volwrite(
-        "/Users/louisarge/Git/emulated_minds/SegNeuron/Train_and_Inference/data/em_data_highres_pred.tif",
-        output_img,
+        "/Users/louisarge/Git/emulated_minds/SegNeuron/Train_and_Inference/data/em_data_highres_seg.tif",
+        segment_img,
     )

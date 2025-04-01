@@ -1,97 +1,94 @@
 import numpy as np
+import skimage.segmentation
+import nifty
+import nifty.graph
+import nifty.graph.rag
+import nifty.graph.opt.multicut as nmc
 
 
-def affinities_to_segmentation(aff, threshold=0.5):
+def segment_neuron_affinities(
+    affinity_map: np.ndarray, foreground_mask: np.ndarray = None, threshold: float = 0.5
+) -> np.ndarray:
     """
-    Convert a 3-channel affinity map into a labeled volume by threshold + union-find.
+    Segment neuron instance IDs from a 3D affinity map using a typical
+    boundary-based pipeline (watershed + multicut).
 
     Parameters
     ----------
-    aff : numpy.ndarray
-        A float array of shape (3, D, H, W), the predicted affinities along x, y, z axes.
-    threshold : float
-        If aff[channel, d, h, w] exceeds this threshold, we union the voxel with its neighbor.
+    affinity_map : np.ndarray
+        A float32 array of shape (3, D, H, W), each channel is affinity
+        (likelihood that adjacent voxels along x, y, or z axis belong
+        to the same object).
+    foreground_mask : np.ndarray, optional
+        A binary array of shape (D, H, W). If given, any voxel with
+        foreground_mask==0 is forced to have zero affinity.
+    threshold : float, optional
+        Threshold on the boundary probability used in watershed
+        initialization. Typically 0.5 or thereabouts.
 
     Returns
     -------
-    seg : numpy.ndarray
-        An int array of shape (D, H, W), where each distinct integer corresponds to one segment.
+    seg : np.ndarray
+        A 3D integer-labeled segmentation of shape (D, H, W), where each
+        connected neuron segment has a unique integer ID.
     """
 
-    # aff has shape (3, D, H, W)
-    c, D, H, W = aff.shape
-    assert c == 3, "Expected 3 channels for x-, y-, z-affinities."
+    # 1. Foreground restriction
+    #    (replace predicted affinity with zero if outside the neuron).
+    #    This step helps clamp spurious high-affinity values in the background.
+    if foreground_mask is not None:
+        # broadcast (3, D, H, W) & (D, H, W)
+        affinity_map = np.minimum(affinity_map, foreground_mask[None])
 
-    # Flatten each (d, h, w) voxel index into a single integer for union-find
-    def index(d, h, w):
-        return d * (H * W) + h * W + w
+    # 2. Convert affinity -> boundary probability
+    #    The boundary probability is typically something like 1 - affinity.
+    #    We combine the x/y/z boundary signals, for example by taking
+    #    the maximum across channels:
+    boundary_prob = 1.0 - np.max(affinity_map, axis=0)  # shape (D, H, W)
 
-    # Union-Find (Disjoint Set) data structures
-    parent = np.arange(D * H * W)
-    rank = np.zeros(D * H * W, dtype=np.int32)
+    # 3. Create an over-segmentation via watershed
+    #    We can interpret boundary_prob as a height-map for watershed.
+    #    A small sigma is sometimes used to smooth boundary before watershed.
+    #    We'll do a simple threshold to define "seeds".
+    seed_map = (boundary_prob < threshold).astype(np.uint8)
+    # Label the seeds
+    seeds, _ = skimage.measure.label(seed_map, return_num=True)
+    # Watershed from those seeds
+    overseg = skimage.segmentation.watershed(boundary_prob, markers=seeds, mask=None)
 
-    def find_set(x):
-        if parent[x] != x:
-            parent[x] = find_set(parent[x])
-        return parent[x]
+    # 4. Build Region Adjacency Graph (RAG)
+    rag = nifty.graph.rag.gridRag(overseg.astype("uint64"))
 
-    def union_set(a, b):
-        rootA = find_set(a)
-        rootB = find_set(b)
-        if rootA != rootB:
-            if rank[rootA] < rank[rootB]:
-                parent[rootA] = rootB
-            elif rank[rootA] > rank[rootB]:
-                parent[rootB] = rootA
-            else:
-                parent[rootB] = rootA
-                rank[rootA] += 1
+    # 5. Compute edge "affinity" or "boundary" values for each pair of regions in the RAG.
+    #    Typically, we take the average or minimum boundary prob along the boundary
+    #    between two segments as an edge cost. Here, we'll do a simple mean boundary:
+    #    The function "nifty.graph.rag.accumulateEdgeMeanAndLength" accumulates
+    #    the boundary prob for each edge and returns edge features (mean, pixel count).
+    features = nifty.graph.rag.accumulateEdgeMeanAndLength(rag, boundary_prob)
 
-    # Go through each voxel and union it with neighbors if affinity > threshold
-    for d in range(D):
-        for h in range(H):
-            for w in range(W):
-                # Current voxel's flattened index
-                curr_idx = index(d, h, w)
+    # Our edge cost is the mean boundary probability on that edge.
+    edge_cost = features[:, 0]  # first column is the mean boundary
 
-                # 1) Along X-axis: check neighbor at (d, h, w+1)
-                if w < W - 1 and aff[0, d, h, w] > threshold:
-                    union_set(curr_idx, index(d, h, w + 1))
+    # 6. Solve multicut with Kernighan–Lin to get the final partition of the RAG.
+    objective = nmc.multicutObjective(rag, edge_cost)
+    solver_factory = nmc.KernighanLinFactoryMulticutObjectiveUndirectedGraph()
+    solver = solver_factory.create(objective)
+    # run solver
+    solved_node_labels = solver.optimize()
 
-                # 2) Along Y-axis: check neighbor at (d, h+1, w)
-                if h < H - 1 and aff[1, d, h, w] > threshold:
-                    union_set(curr_idx, index(d, h + 1, w))
+    # 7. Project the partitioning on the RAG back to a full 3D segmentation.
+    seg = nifty.graph.rag.projectScalarNodeDataToPixels(rag, solved_node_labels)
 
-                # 3) Along Z-axis: check neighbor at (d+1, h, w)
-                if d < D - 1 and aff[2, d, h, w] > threshold:
-                    union_set(curr_idx, index(d + 1, h, w))
+    print("seg.min(): ", np.min(seg))
+    print("seg.max(): ", np.max(seg))
 
-    # Second pass: assign unique segment IDs by root representative
-    seg = np.zeros((D, H, W), dtype=np.int32)
-    label_map = {}
-    next_label = 1
-
-    for d in range(D):
-        for h in range(H):
-            for w in range(W):
-                root = find_set(index(d, h, w))
-                # Assign each root a unique integer ID
-                if root not in label_map:
-                    label_map[root] = next_label
-                    next_label += 1
-                seg[d, h, w] = label_map[root]
-
-    return seg
+    return seg.astype(np.int32)
 
 
-# -----------------------
-# Example usage:
-if __name__ == "__main__":
-    # Suppose 'pred_aff' is your (3, D, H, W) numpy array of predicted affinities in [0, 1].
-    D, H, W = 32, 96, 96
-    pred_aff = np.random.rand(3, D, H, W)
-
-    # Convert to integer-labeled segmentation volume
-    seg_vol = affinities_to_segmentation(pred_aff, threshold=0.5)
-    print("Segmentation volume shape:", seg_vol.shape)
-    print("Unique segment IDs:", np.unique(seg_vol))
+def segment_to_image(segment):
+    colors = np.random.randint(0, 255, (np.max(segment), 3))
+    image = np.zeros((segment.shape[0], segment.shape[1], segment.shape[2], 3))
+    print("range:", np.max(segment))
+    for i in range(np.max(segment)):
+        image[segment == i] = colors[i]
+    return image
