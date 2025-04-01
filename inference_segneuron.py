@@ -81,6 +81,6 @@ if __name__ == "__main__":
 
     # Save as multi-channel 3D tiff stack
     imageio.volwrite(
-        "/Users/louisarge/Git/emulated_minds/SegNeuron/Train_and_Inference/data/em_data_highres_seg.tif",
+        "output/em_data_highres_seg.tif",
         segment_img,
     )
