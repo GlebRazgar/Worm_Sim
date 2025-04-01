@@ -1,2 +1,4 @@
-data/sem.zarr
-
+data/
+output/
+__pycache__/
+models/
