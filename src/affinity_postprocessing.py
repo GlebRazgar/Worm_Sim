@@ -137,7 +137,7 @@ def segment_neuron_affinities(
 def segment_to_image(segment):
     max_label = np.max(segment) + 1  # Add 1 to accommodate 0
     print(f"Creating colors for {max_label} segments")
-    colors = np.random.randint(0, 255, (max_label, 3))
+    colors = np.random.rand(max_label, 3)
     # Make sure 0 is black
     if max_label > 0:
         colors[0] = [0, 0, 0]
