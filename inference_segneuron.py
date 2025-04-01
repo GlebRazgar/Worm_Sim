@@ -19,13 +19,13 @@ if sys.version_info.major == 3 and sys.version_info.minor >= 10:
 from attrdict import AttrDict
 from collections import OrderedDict
 import warnings
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+warnings.filterwarnings("ignore")
+
 import torch
 from src.mnet import MNet
-
-os.environ["CUDA_VISIBLE_DEVICES"] = (
-    "0"  # Note: This might have no effect if CUDA is not available
-)
-warnings.filterwarnings("ignore")
 
 if __name__ == "__main__":
     # Determine the device
