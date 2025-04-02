@@ -70,7 +70,12 @@ if __name__ == "__main__":
     affinity = np.squeeze(affinity.data.cpu().numpy())
     mask = np.squeeze(mask.data.cpu().numpy())
     print("affinity.shape: ", affinity.shape)  # (3, 20, 171, 171)
+    imageio.volwrite(
+        "output/em_data_highres_aff.tif",
+        np.transpose(affinity, (1, 2, 3, 0)),
+    )
     print("mask.shape: ", mask.shape)  # (1, 20, 171, 171)
+    imageio.volwrite("output/em_data_highres_mask.tif", mask.unsqueeze(0))
 
     # Transpose from (C, Z, Y, X) to (Z, Y, X, C)
 
