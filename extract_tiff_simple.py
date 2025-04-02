@@ -42,6 +42,7 @@ def extract_window(zarr_store, dataset_name, z, y, x, d, h, w):
     
     # Ensure coordinates are within bounds
     z_max, y_max, x_max = dataset.shape
+    print(f"Dataset shape: {dataset.shape}")
     
     # Clamp start coordinates to valid range
     z_start = max(0, min(z, z_max-1))
@@ -87,14 +88,29 @@ def colorize_labels(labels):
 
 # Example usage
 if __name__ == "__main__":
-    zarr_path = "data/sem_highres.zarr"
+    zarr_path = "data/sem.zarr"
     
     # Get information about the zarr volume
     zarr_store, datasets = get_zarr_info(zarr_path)
     
     # Example: Extract a window from the raw data
     # Extract a 50×200×200 window starting at position (10, 100, 100)
-    dims = (10, 1000, 1000, 50, 100, 100)
+    
+    # Region of brain:
+    dims = [126, 100, 200, 10000, 364, 464]
+    
+    # Pick the slices where the green/grey neuron is
+    dims[0] += 50
+    # dims[3] = 290 - 50
+    
+    # Pick the bottom right corner of the window
+    dims[1] += dims[4] / 2
+    dims[2] += dims[5] / 2
+    dims[4] /= 2
+    dims[5] /= 2
+    
+    # Convert all dimensions to integers
+    dims = tuple(int(d) for d in dims)
     dim_str = "_".join(map(str, dims))
     raw_window = extract_window(zarr_store, 'raw', *dims)
     
@@ -110,6 +126,5 @@ if __name__ == "__main__":
     # Create colored version of labels for better visualization
     colored_labels = colorize_labels(label_window)
     
-    # Save both regular and colored labels
-    save_to_tiff(label_window, f"output/{dim_str}_label_window.tif")
+    # Save colored labels
     save_to_tiff(colored_labels, f"output/{dim_str}_colored_labels_window.tif")
