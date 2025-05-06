@@ -1,7 +1,8 @@
-# BAAIWorm
+# Worm_Sim
 
-Welcome to BAAIWorm, an **integrative data-driven model of *C. elegans***, linking brain, body and environment to faithfully replicate *C. elegans* locomotion behavior.   
-For a comprehensive introduction to BAAIWorm, please refer to [our paper](https://www.nature.com/articles/s43588-024-00738-w).
+Welcome to Worm_Sim, a **biophysical data-driven model of *C. elegans***, simulating brain-body biophysics and environment to faithfully pass a brain uploading Turing test.   
+
+This project builds upon the BAAIWorm project and [paper](https://www.nature.com/articles/s43588-024-00738-w) and integrating it with a multitude of secondary functional and structural data to create what one might consider a holistic brain upload. 
 <div align="center">
   <img src="https://github.com/Jessie940611/BAAIWorm/blob/main/img/MetaWorm_overview.png">
 </div>
