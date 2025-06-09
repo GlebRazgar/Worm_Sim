@@ -285,6 +285,131 @@ class ConnectomeLIFNetwork:
         plt.tight_layout()
         plt.savefig('connectome_firing_rate_distribution.png', dpi=300, bbox_inches='tight')
         plt.show()
+    
+    def save_activation_data(self, filename='connectome_activations', format='hdf5'):
+        """Save all neural activation data to file
+        
+        Args:
+            filename (str): Base filename (without extension)
+            format (str): 'hdf5', 'npz', or 'csv'
+        """
+        print(f"Saving activation data in {format} format...")
+        
+        if format == 'hdf5':
+            import h5py
+            
+            with h5py.File(f'{filename}.h5', 'w') as f:
+                # Metadata
+                f.attrs['dt'] = self.dt
+                f.attrs['total_time'] = len(self.neurons[self.neuron_ids[0]].membrane_history) * self.dt
+                f.attrs['num_neurons'] = len(self.neuron_ids)
+                f.attrs['simulation_parameters'] = str({
+                    'dt': self.dt,
+                    'synaptic_weight_scale': self.synaptic_weight_scale
+                })
+                
+                # Neuron IDs
+                neuron_id_bytes = [n.encode('utf-8') for n in self.neuron_ids]
+                f.create_dataset('neuron_ids', data=neuron_id_bytes)
+                
+                # Time array
+                time_array = np.arange(0, len(self.neurons[self.neuron_ids[0]].membrane_history)) * self.dt
+                f.create_dataset('time', data=time_array, compression='gzip')
+                
+                # Membrane potentials (neurons x time)
+                membrane_data = np.array([self.neurons[nid].membrane_history for nid in self.neuron_ids])
+                f.create_dataset('membrane_potentials', data=membrane_data, compression='gzip')
+                
+                # Spike times for each neuron
+                spikes_group = f.create_group('spike_times')
+                for neuron_id in self.neuron_ids:
+                    spike_times = np.array(self.neurons[neuron_id].spike_times)
+                    spikes_group.create_dataset(neuron_id, data=spike_times, compression='gzip')
+                
+                # Connectivity matrix
+                conn_group = f.create_group('connectivity')
+                for source_id in self.neuron_ids:
+                    weights = [self.connectivity_matrix[source_id][target_id] for target_id in self.neuron_ids]
+                    conn_group.create_dataset(f'{source_id}_weights', data=np.array(weights), compression='gzip')
+                
+            print(f"Saved to {filename}.h5")
+            
+        elif format == 'npz':
+            # Create data dictionary
+            data_dict = {
+                'dt': self.dt,
+                'neuron_ids': np.array(self.neuron_ids),
+                'time': np.arange(0, len(self.neurons[self.neuron_ids[0]].membrane_history)) * self.dt,
+                'membrane_potentials': np.array([self.neurons[nid].membrane_history for nid in self.neuron_ids])
+            }
+            
+            # Add spike times
+            for i, neuron_id in enumerate(self.neuron_ids):
+                data_dict[f'spikes_{i:03d}_{neuron_id}'] = np.array(self.neurons[neuron_id].spike_times)
+            
+            np.savez_compressed(f'{filename}.npz', **data_dict)
+            print(f"Saved to {filename}.npz")
+            
+        elif format == 'csv':
+            # Save membrane potentials
+            membrane_df = pd.DataFrame(
+                data=np.array([self.neurons[nid].membrane_history for nid in self.neuron_ids]).T,
+                columns=self.neuron_ids
+            )
+            membrane_df.insert(0, 'time_ms', np.arange(len(membrane_df)) * self.dt)
+            membrane_df.to_csv(f'{filename}_membrane_potentials.csv', index=False)
+            
+            # Save spike times
+            spike_data = []
+            for neuron_id in self.neuron_ids:
+                for spike_time in self.neurons[neuron_id].spike_times:
+                    spike_data.append({'neuron_id': neuron_id, 'spike_time_ms': spike_time})
+            
+            spike_df = pd.DataFrame(spike_data)
+            spike_df.to_csv(f'{filename}_spikes.csv', index=False)
+            
+            print(f"Saved to {filename}_membrane_potentials.csv and {filename}_spikes.csv")
+        
+        else:
+            raise ValueError("Format must be 'hdf5', 'npz', or 'csv'")
+    
+    def load_activation_data(self, filename, format='hdf5'):
+        """Load previously saved activation data
+        
+        Args:
+            filename (str): Filename to load (with extension)
+            format (str): 'hdf5', 'npz', or 'csv'
+        
+        Returns:
+            dict: Dictionary containing loaded data
+        """
+        print(f"Loading activation data from {filename}...")
+        
+        if format == 'hdf5':
+            import h5py
+            
+            data = {}
+            with h5py.File(filename, 'r') as f:
+                data['dt'] = f.attrs['dt']
+                data['total_time'] = f.attrs['total_time'] 
+                data['num_neurons'] = f.attrs['num_neurons']
+                data['neuron_ids'] = [nid.decode('utf-8') for nid in f['neuron_ids'][:]]
+                data['time'] = f['time'][:]
+                data['membrane_potentials'] = f['membrane_potentials'][:]
+                
+                # Load spike times
+                data['spike_times'] = {}
+                for neuron_id in data['neuron_ids']:
+                    data['spike_times'][neuron_id] = f['spike_times'][neuron_id][:]
+                    
+            return data
+            
+        elif format == 'npz':
+            loaded = np.load(filename, allow_pickle=True)
+            return dict(loaded)
+            
+        else:
+            raise ValueError("Loading only supported for 'hdf5' and 'npz' formats")
 
 def main():
     """Main execution function"""
@@ -302,18 +427,29 @@ def main():
     
     # Create and run simulation
     print("Initializing C. elegans LIF Network...")
-    network = ConnectomeLIFNetwork(positions_path, connections_path, dt=0.1, synaptic_weight_scale=0.2)
+    network = ConnectomeLIFNetwork(positions_path, connections_path, dt=0.5, synaptic_weight_scale=0.2)
     
     # Run simulation
-    network.simulate(duration_ms=1000, progress_bar=True)
+    network.simulate(duration_ms=500, progress_bar=True)
     
     # Generate visualizations and analysis
     print("\nGenerating visualizations...")
-    network.plot_raster(max_neurons=50, time_window=(0, 1000))
+    network.plot_raster(max_neurons=50, time_window=(0, 500))
     network.plot_membrane_potentials(time_window=(0, 200))
     network.analyze_network_activity()
     
-    print("\nSimulation complete! Check the generated PNG files for visualizations.")
+    # Save activation data
+    print("\nSaving activation data...")
+    network.save_activation_data('connectome_activations', format='csv')
+    network.save_activation_data('connectome_activations', format='npz')  # Keep NPZ as backup
+    
+    print("\nSimulation complete! Generated files:")
+    print("- connectome_raster_plot.png")
+    print("- connectome_membrane_potentials.png") 
+    print("- connectome_firing_rate_distribution.png")
+    print("- connectome_activations_membrane_potentials.csv")
+    print("- connectome_activations_spikes.csv")
+    print("- connectome_activations.npz")
     
     return network
 
