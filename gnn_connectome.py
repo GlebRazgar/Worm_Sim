@@ -16,7 +16,7 @@ neurons_df = pd.read_csv(positions_path, header=None,
 print(f"Loaded {len(neurons_df)} neuron positions")
 
 # Load the connectivity data
-connections_path = 'data/SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
+connections_path = 'data/White/SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
 print(f"Loading connectivity data from {connections_path}")
 # Since this is an excel file with potential multiple sheets, we need to specify the sheet
 try:

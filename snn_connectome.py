@@ -11,6 +11,10 @@ from tqdm import tqdm
 
 print("Libraries imported successfully")
 
+# Create outputs directory if it doesn't exist
+os.makedirs('outputs', exist_ok=True)
+print("Outputs directory created/verified")
+
 class LIFNeuron:
     """Leaky Integrate-and-Fire neuron model"""
     def __init__(self, neuron_id, tau_m=20.0, v_rest=-70.0, v_thresh=-50.0, v_reset=-80.0, 
@@ -218,7 +222,7 @@ class ConnectomeLIFNetwork:
             plt.xlim(time_window)
         
         plt.tight_layout()
-        plt.savefig('connectome_raster_plot.png', dpi=300, bbox_inches='tight')
+        plt.savefig('outputs/connectome_raster_plot.png', dpi=300, bbox_inches='tight')
         plt.show()
         
     def plot_membrane_potentials(self, neuron_subset=None, time_window=None):
@@ -247,7 +251,7 @@ class ConnectomeLIFNetwork:
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('connectome_membrane_potentials.png', dpi=300, bbox_inches='tight')
+        plt.savefig('outputs/connectome_membrane_potentials.png', dpi=300, bbox_inches='tight')
         plt.show()
         
     def analyze_network_activity(self):
@@ -283,7 +287,7 @@ class ConnectomeLIFNetwork:
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('connectome_firing_rate_distribution.png', dpi=300, bbox_inches='tight')
+        plt.savefig('outputs/connectome_firing_rate_distribution.png', dpi=300, bbox_inches='tight')
         plt.show()
     
     def save_activation_data(self, filename='connectome_activations', format='hdf5'):
@@ -298,7 +302,7 @@ class ConnectomeLIFNetwork:
         if format == 'hdf5':
             import h5py
             
-            with h5py.File(f'{filename}.h5', 'w') as f:
+            with h5py.File(f'outputs/{filename}.h5', 'w') as f:
                 # Metadata
                 f.attrs['dt'] = self.dt
                 f.attrs['total_time'] = len(self.neurons[self.neuron_ids[0]].membrane_history) * self.dt
@@ -332,7 +336,7 @@ class ConnectomeLIFNetwork:
                     weights = [self.connectivity_matrix[source_id][target_id] for target_id in self.neuron_ids]
                     conn_group.create_dataset(f'{source_id}_weights', data=np.array(weights), compression='gzip')
                 
-            print(f"Saved to {filename}.h5")
+            print(f"Saved to outputs/{filename}.h5")
             
         elif format == 'npz':
             # Create data dictionary
@@ -347,8 +351,8 @@ class ConnectomeLIFNetwork:
             for i, neuron_id in enumerate(self.neuron_ids):
                 data_dict[f'spikes_{i:03d}_{neuron_id}'] = np.array(self.neurons[neuron_id].spike_times)
             
-            np.savez_compressed(f'{filename}.npz', **data_dict)
-            print(f"Saved to {filename}.npz")
+            np.savez_compressed(f'outputs/{filename}.npz', **data_dict)
+            print(f"Saved to outputs/{filename}.npz")
             
         elif format == 'csv':
             # Save membrane potentials
@@ -357,7 +361,7 @@ class ConnectomeLIFNetwork:
                 columns=self.neuron_ids
             )
             membrane_df.insert(0, 'time_ms', np.arange(len(membrane_df)) * self.dt)
-            membrane_df.to_csv(f'{filename}_membrane_potentials.csv', index=False)
+            membrane_df.to_csv(f'outputs/{filename}_membrane_potentials.csv', index=False)
             
             # Save spike times
             spike_data = []
@@ -366,9 +370,9 @@ class ConnectomeLIFNetwork:
                     spike_data.append({'neuron_id': neuron_id, 'spike_time_ms': spike_time})
             
             spike_df = pd.DataFrame(spike_data)
-            spike_df.to_csv(f'{filename}_spikes.csv', index=False)
+            spike_df.to_csv(f'outputs/{filename}_spikes.csv', index=False)
             
-            print(f"Saved to {filename}_membrane_potentials.csv and {filename}_spikes.csv")
+            print(f"Saved to outputs/{filename}_membrane_potentials.csv and outputs/{filename}_spikes.csv")
         
         else:
             raise ValueError("Format must be 'hdf5', 'npz', or 'csv'")
@@ -415,7 +419,7 @@ def main():
     """Main execution function"""
     # File paths
     positions_path = 'data/NeuroPal/LowResAtlasWithHighResHeadsAndTails.csv'
-    connections_path = 'data/SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
+    connections_path = 'data/White/SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
     
     # Check if data files exist
     if not os.path.exists(positions_path):
@@ -444,12 +448,12 @@ def main():
     network.save_activation_data('connectome_activations', format='npz')  # Keep NPZ as backup
     
     print("\nSimulation complete! Generated files:")
-    print("- connectome_raster_plot.png")
-    print("- connectome_membrane_potentials.png") 
-    print("- connectome_firing_rate_distribution.png")
-    print("- connectome_activations_membrane_potentials.csv")
-    print("- connectome_activations_spikes.csv")
-    print("- connectome_activations.npz")
+    print("- outputs/connectome_raster_plot.png")
+    print("- outputs/connectome_membrane_potentials.png") 
+    print("- outputs/connectome_firing_rate_distribution.png")
+    print("- outputs/connectome_activations_membrane_potentials.csv")
+    print("- outputs/connectome_activations_spikes.csv")
+    print("- outputs/connectome_activations.npz")
     
     return network
 

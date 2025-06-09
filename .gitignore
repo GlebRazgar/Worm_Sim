@@ -1,0 +1,13 @@
+*.csv
+*.h5
+*.npz
+*.png
+*.pdf
+*.svg
+*.eps
+*.pdf
+*.svg
+*.eps
+
+data/
+outputs/
