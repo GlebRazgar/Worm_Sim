@@ -419,7 +419,7 @@ def main():
     """Main execution function"""
     # File paths
     positions_path = 'data/NeuroPal/LowResAtlasWithHighResHeadsAndTails.csv'
-    connections_path = 'data/White/SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
+    connections_path = 'data/Cook/SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
     
     # Check if data files exist
     if not os.path.exists(positions_path):
