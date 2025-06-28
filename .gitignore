@@ -1,3 +1,4 @@
+*.txt
 *.csv
 *.h5
 *.npz
