@@ -9,6 +9,8 @@
 *.pdf
 *.svg
 *.eps
+*.mat
+
 
 data/
 outputs/
