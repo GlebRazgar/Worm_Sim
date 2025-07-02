@@ -85,4 +85,4 @@ This simulation framework is inspired by recent advances in C. elegans connectom
 
 ---
 
-*Built with ❤️ from Duality for the future of humanity*
+*Built with ❤️ for the future of humanity*
