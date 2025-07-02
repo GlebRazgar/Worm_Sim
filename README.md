@@ -83,18 +83,6 @@ This simulation framework is inspired by recent advances in C. elegans connectom
 - **Functional Validation**: Calcium imaging and electrophysiology data integration
 - **Biomechanical Modeling**: Realistic body dynamics and locomotion patterns
 
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to:
-- Report bugs and issues
-- Suggest new features
-- Submit pull requests
-- Share experimental data
-
-## 📄 License
-
-This project is open source. See the LICENSE file for details.
-
 ---
 
-*Built with ❤️ for the C. elegans research community*
+*Built with ❤️ from Duality for the future of humanity
