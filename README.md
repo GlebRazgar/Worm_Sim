@@ -3,7 +3,7 @@
 
 A comprehensive simulation framework for modeling the brain, body, and environment interactions of *Caenorhabditis elegans* using integrative data-driven approaches.
 
-![C. elegans crawling simulation](assets/worm-crawling.gif)
+![C. elegans crawling simulation](assets/worm.gif)
 
 ## 🎯 Overview
 
